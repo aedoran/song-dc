@@ -1,0 +1,546 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title>example</title>
+
+    <meta charset="UTF-8">
+
+    <script type="text/javascript" src="lib/d3.v2.js"></script>
+    <script type="text/javascript" src="lib/crossfilter.js"></script>
+
+    <script type="text/javascript" src="dc.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="dc.css"/>
+
+
+    <script type="text/javascript">
+
+
+    </script>
+</head>
+<body>
+
+<div class="content">
+
+
+<h2>Songs</h2>
+
+<div id="signature-chart" class="chart">
+    <span class="title">Time Signature</span>
+    <a class="reset" href="javascript:signatureChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clear"></div>
+</div>
+
+
+<div id="duration-chart" class="chart">
+    <span>Durations</span>
+    <a class="reset" href="javascript:durationChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clear"></div>
+</div>
+<div id="key-chart" class="chart">
+    <span>Keys</span>
+    <a class="reset" href="javascript:keyChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clear"></div>
+</div>
+<div class="clear"></div>
+
+<div id="hotness-chart" class="chart">
+    <span>Hotness</span>
+    <a class="reset" href="javascript:hotnessChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clear"></div>
+</div>
+
+<div id="year-chart" class="chart">
+    <span>Year</span>
+    <a class="reset" href="javascript:yearChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clear"></div>
+</div>
+<div id="tempo-chart" class="chart">
+    <span>Tempo</span>
+    <a class="reset" href="javascript:tempoChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clear"></div>
+</div>
+
+<div class="clear"></div>
+
+<div id="data-count">
+    <span class="filter-count"></span> selected out of <span class="total-count"/> records
+</div>
+
+<div>
+    <a href="javascript:dc.filterAll(); dc.renderAll();">Reset All</a>
+</div>
+
+<div id="data-table">
+    <div class="header">
+        <span>title</span>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+//var gainOrLossChart = dc.pieChart("#gain-loss-chart");
+var durationChart = dc.barChart("#duration-chart");
+var tempoChart = dc.barChart("#tempo-chart");
+var keyChart = dc.pieChart("#key-chart");
+var signatureChart = dc.pieChart("#signature-chart");
+var hotnessChart = dc.barChart("#hotness-chart");
+var yearChart = dc.barChart("#year-chart");
+//var dayOfWeekChart = dc.pieChart("#day-of-week-chart");
+//var volumeMoveChart = dc.compositeChart("#monthly-move-chart");
+//var yearlyBubbleChart = dc.bubbleChart("#yearly-bubble-chart");
+
+// set dc.js version in title
+d3.selectAll("#version").text(dc.version);
+
+// load data from a csv file
+d3.json("songs.json", function(data) {
+            console.log(data);
+            // since its a csv file we need to format the data a bit
+            var dateFormat = d3.time.format("%m/%d/%Y");
+            var numberFormat = d3.format(".2f");
+/*
+            data.forEach(function(e) {
+                e.dd = dateFormat.parse(e.date);
+                e.month = d3.time.month(e.dd); // pre-calculate month for better performance
+            });
+*/
+            // feed it through crossfilter
+            var ndx = crossfilter(data.filter(function(d) {
+                var a = (d.year > 1900 && d.tempo !="nan" && d.hottness > 0 && d.hottness != "nan");
+                return a;
+            }));
+            var all = ndx.groupAll();
+/*
+            var yearlyDimension = ndx.dimension(function(d) {
+                return d3.time.year(d.dd);
+            });
+            var yearlyPerformanceGroup = yearlyDimension.group().reduce(
+                    //add
+                    function(p, v) {
+                        ++p.count;
+                        p.absGain += +v.close - +v.open;
+                        p.fluctuation += Math.abs(+v.close - +v.open);
+                        p.sumIndex += (+v.open + +v.close) / 2;
+                        p.avgIndex = p.sumIndex / p.count;
+                        p.percentageGain = (p.absGain / p.avgIndex) * 100;
+                        p.fluctuationPercentage = (p.fluctuation / p.avgIndex) * 100;
+                        return p;
+                    },
+                    //remove
+                    function(p, v) {
+                        --p.count;
+                        p.absGain -= +v.close - +v.open;
+                        p.fluctuation -= Math.abs(+v.close - +v.open);
+                        p.sumIndex -= (+v.open + +v.close) / 2;
+                        p.avgIndex = p.sumIndex / p.count;
+                        p.percentageGain = (p.absGain / p.avgIndex) * 100;
+                        p.fluctuationPercentage = (p.fluctuation / p.avgIndex) * 100;
+                        return p;
+                    },
+                    //init
+                    function() {
+                        return {count:0, absGain:0, fluctuation:0, fluctuationPercentage:0, sumIndex:0, avgIndex:0, percentageGain:0};
+                    }
+            );
+*/
+						var year = ndx.dimension(function(d) {
+              if (d.year  > 1950) {
+                return d.year;
+              } else {
+                return null;
+              }
+						});
+						var hotness = ndx.dimension(function(d) {
+              return parseFloat(d.hottness);
+						});
+						var tempo = ndx.dimension(function(d) {
+              return d.tempo;
+						});
+						var duration = ndx.dimension(function(d) {
+							return d.duration;
+						});
+						var signature = ndx.dimension(function(d) {
+							return d.time_signature;
+						});
+						var key = ndx.dimension(function(d) {
+							switch (d.key) {
+							  case "-1":
+									return "None";
+								case "0":
+									return "C";
+								case "1":
+									return "C#";
+								case "2":
+									return "D";
+								case "3":
+									return "D#";
+								case "4":
+									return "E";
+								case "5":
+									return "F";
+								case "6":
+									return "F#";
+								case "7":
+									return "G";
+								case "8":
+									return "G#";
+								case "9":
+									return "A";
+								case "10":
+									return "A#";
+								case "11":
+									return "B";
+							}
+						});
+            var yearGroup = year.group(function(d) {
+              return d;
+            });
+						var signatureGroup = signature.group();
+						var keyGroup = key.group();
+						var durationGroup = duration.group(function(d) {
+							return Math.floor(d/5) * 5;
+						});
+						var tempoGroup = tempo.group(function(d) {
+							var a=Math.floor(d/5) * 5;
+              return a;
+						});
+						var hotnessGroup = hotness.group(function(d) {
+							  return Math.floor( d * 100 );
+						});
+
+            signatureChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .innerRadius(30)
+                    .dimension(signature)
+                    .group(signatureGroup);
+
+            keyChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .innerRadius(30)
+                    .dimension(key)
+                    .group(keyGroup);
+
+            durationChart.width(420)
+                    .height(180)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(duration)
+                    .group(durationGroup)
+                    .elasticY(true)
+                    .centerBar(true)
+                    .gap(1)
+                    .round(dc.round.floor)
+                    .x(d3.scale.linear().domain([0, 600]))
+                    .renderHorizontalGridLines(true)
+                    .xAxis()
+                    .tickFormat(function(v) {
+                        return v;
+                    });
+
+            hotnessChart.width(420)
+                    .height(180)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(hotness)
+                    .group(hotnessGroup)
+                    .elasticY(true)
+                    .centerBar(true)
+                    .gap(1)
+                    .round(dc.round.floor)
+                    .x(d3.scale.linear().domain([0, 100]))
+                    .renderHorizontalGridLines(true)
+                    .xAxis()
+                    .tickFormat(function(v) {
+                        return v;
+                    });
+
+
+            yearChart.width(420)
+                    .height(180)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(year)
+                    .group(yearGroup)
+                    .elasticY(true)
+                    .centerBar(true)
+                    .gap(1)
+                    .round(dc.round.floor)
+                    .x(d3.scale.linear().domain([1950, 2012]))
+                    .renderHorizontalGridLines(true)
+                    .xAxis()
+                    .tickFormat(function(v) {
+                        return v;
+                    });
+
+
+            tempoChart.width(420)
+                    .height(180)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(tempo)
+                    .group(tempoGroup)
+                    .elasticY(true)
+                    .centerBar(true)
+                    .gap(1)
+                    .round(dc.round.floor)
+                    .x(d3.scale.linear().domain([20, 300]))
+                    .renderHorizontalGridLines(true)
+                    .xAxis()
+                    .tickFormat(function(v) {
+                        return v;
+                    });
+
+            dc.dataCount("#data-count")
+                    .dimension(ndx)
+                    .group(all);
+
+            dc.dataTable("#data-table")
+                    .dimension(ndx.dimension(function(d) { return d}))
+                    .group(function(d) { return d; })
+                    .size(100)
+                    .columns([
+                function(d) {
+                    return d.title;
+                },
+                function(d) {
+                    return d.year;
+                },
+                function(d) {
+                    return d.tempo;
+                },
+                function(d) {
+                    return d.duration;
+                },
+                function(d) {
+                    return d.hottness;
+                },
+                ]).sortBy(function(d) { return d.tempo })
+                .order(d3.ascending);
+/*
+            var dateDimension = ndx.dimension(function(d) {
+                return d.dd;
+            });
+
+            // monthly index avg fluctuation in percentage
+            var moveMonths = ndx.dimension(function(d) {
+                return d.month;
+            });
+            var monthlyMoveGroup = moveMonths.group().reduceSum(function(d) {
+                return Math.abs(+d.close - +d.open);
+            });
+            var volumeByMonthGroup = moveMonths.group().reduceSum(function(d) {
+                return d.volume / 500000;
+            });
+            var indexAvgByMonthGroup = moveMonths.group().reduce(
+                    function(p, v) {
+                        ++p.days;
+                        p.total += (+v.open + +v.close) / 2;
+                        p.avg = Math.round(p.total / p.days);
+                        return p;
+                    },
+                    function(p, v) {
+                        --p.days;
+                        p.total -= (+v.open + +v.close) / 2;
+                        p.avg = p.days==0?0:Math.round(p.total / p.days);
+                        return p;
+                    },
+                    function() {
+                        return {days:0, total:0, avg:0};
+                    }
+            );
+
+            var gainOrLoss = ndx.dimension(function(d) {
+                return +d.open > +d.close ? "Loss" : "Gain";
+            });
+            var gainOrLossGroup = gainOrLoss.group();
+
+            var fluctuation = ndx.dimension(function(d) {
+                return Math.round((d.close - d.open) / d.open * 100);
+            });
+            var fluctuationGroup = fluctuation.group();
+
+            var quarter = ndx.dimension(function(d) {
+                var month = d.dd.getMonth();
+                if (month <= 3)
+                    return "Q1";
+                else if (month > 3 && month <= 5)
+                    return "Q2";
+                else if (month > 5 && month <= 7)
+                    return "Q3";
+                else
+                    return "Q4";
+            });
+            var quarterGroup = quarter.group().reduceSum(function(d) {
+                return d.volume;
+            });
+
+            var dayOfWeek = ndx.dimension(function(d) {
+                var day = d.dd.getDay();
+                switch (day) {
+                    case 0:
+                        return "Sun";
+                    case 1:
+                        return "Mon";
+                    case 2:
+                        return "Tue";
+                    case 3:
+                        return "Wed";
+                    case 4:
+                        return "Thu";
+                    case 5:
+                        return "Fri";
+                    case 6:
+                        return "Sat";
+                }
+            });
+            var dayOfWeekGroup = dayOfWeek.group();
+
+            yearlyBubbleChart.width(990)
+                    .height(250)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(yearlyDimension)
+                    .group(yearlyPerformanceGroup)
+                    .transitionDuration(1500)
+                    .colors(["#a60000","#ff0000", "#ff4040","#ff7373","#67e667","#39e639","#00cc00"])
+                    .colorDomain([-12000, 12000])
+                    .colorAccessor(function(d){return d.value.absGain;})
+                    .keyAccessor(function(p) {
+                        return p.value.absGain;
+                    })
+                    .valueAccessor(function(p) {
+                        return p.value.percentageGain;
+                    })
+                    .radiusValueAccessor(function(p) {
+                        return p.value.fluctuationPercentage;
+                    })
+                    .maxBubbleRelativeSize(5)
+                    .x(d3.scale.linear().domain([-2500, 2500]))
+                    .y(d3.scale.linear().domain([-100, 100]))
+                    .r(d3.scale.linear().domain([0, 4000]))
+                    .elasticY(true)
+                    .yAxisPadding(100)
+                    .elasticX(true)
+                    .xAxisPadding(500)
+                    .renderHorizontalGridLines(true)
+                    .renderVerticalGridLines(true)
+                    .renderLabel(true)
+                    .renderTitle(true)
+                    .label(function(p) {
+                        return p.key.getFullYear();
+                    })
+                    .title(function(p) {
+                        return p.key.getFullYear()
+                                + "\n"
+                                + "Index Gain: " + numberFormat(p.value.absGain) + "\n"
+                                + "Index Gain in Percentage: " + numberFormat(p.value.percentageGain) + "%\n"
+                                + "Fluctuation / Index Ratio: " + numberFormat(p.value.fluctuationPercentage) + "%";
+                    })
+                    .yAxis().tickFormat(function(v) {
+                        return v + "%";
+                    });
+
+            gainOrLossChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .dimension(gainOrLoss)
+                    .group(gainOrLossGroup)
+                    .label(function(d) {
+                        return d.data.key + "(" + Math.floor(d.data.value / all.value() * 100) + "%)";
+                    });
+
+            quarterChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .innerRadius(30)
+                    .dimension(signature)
+                    .group(signatureGroup);
+
+            dayOfWeekChart.width(180)
+                    .height(180)
+                    .radius(80)
+                    .colors(['#3182bd', '#6baed6', '#9ecae1', '#c6dbef', '#dadaeb'])
+                    .innerRadius(30)
+                    .dimension(dayOfWeek)
+                    .group(dayOfWeekGroup);
+
+            fluctuationChart.width(420)
+                    .height(180)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(fluctuation)
+                    .group(fluctuationGroup)
+                    .elasticY(true)
+                    .centerBar(true)
+                    .gap(1)
+                    .round(dc.round.floor)
+                    .x(d3.scale.linear().domain([-25, 25]))
+                    .renderHorizontalGridLines(true)
+                    .xAxis()
+                    .tickFormat(function(v) {
+                        return v + "%";
+                    });
+
+            volumeMoveChart.width(990)
+                    .height(180)
+                    .margins({top: 10, right: 50, bottom: 30, left: 40})
+                    .dimension(moveMonths)
+                    .group(indexAvgByMonthGroup)
+                    .valueAccessor(function(d) {
+                        return d.value.avg;
+                    })
+                    .x(d3.time.scale().domain([new Date(1985, 0, 1), new Date(2012, 11, 31)]))
+                    .round(d3.time.month.round)
+                    .xUnits(d3.time.months)
+                    .elasticY(true)
+                    .renderHorizontalGridLines(true)
+                    .compose([
+                        dc.barChart(volumeMoveChart).group(volumeByMonthGroup).centerBar(true),
+                        dc.lineChart(volumeMoveChart).group(indexAvgByMonthGroup).valueAccessor(function(d){return d.value.avg;}).renderArea(true).stack(monthlyMoveGroup, function(d){return d.value;})
+                    ]);
+
+            dc.dataCount("#data-count")
+                    .dimension(ndx)
+                    .group(all);
+
+            dc.dataTable("#data-table")
+                    .dimension(dateDimension)
+                    .group(function(d) {
+                        var format = d3.format("02d");
+                        return d.dd.getFullYear() + "/" + format((d.dd.getMonth() + 1));
+                    })
+                    .size(10)
+                    .columns([
+                function(d) {
+                    return d.date;
+                },
+                function(d) {
+                    return d.open;
+                },
+                function(d) {
+                    return d.close;
+                },
+                function(d) {
+                    return numberFormat(d.close - d.open);
+                },
+                function(d) {
+                    return d.volume;
+                }
+            ])
+                    .sortBy(function(d) {
+                        return d.dd;
+                    })
+                    .order(d3.ascending);
+*/
+            dc.renderAll();
+        }
+);
+</script>
+
+
+</body>
+</html>
